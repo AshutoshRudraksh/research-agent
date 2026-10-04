@@ -1,4 +1,5 @@
 langchain-core>=1.6.0
+typing_extensions>=4.5.0
 langchain-ollama>=1.1.0
 langgraph>=1.2.0
 ddgs>=9.0.0

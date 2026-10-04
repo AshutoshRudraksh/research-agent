@@ -8,20 +8,41 @@ from datetime import datetime
 
 REPORTS_DIR = Path("reports")
 READ_FAIL_PREFIX = "Failed to read URL:"
+READ_FAIL_MARK = "<!-- read_failed -->"
 WRITE_OK_PREFIX = "Report saved to "
 SEARCH_EMPTY = "SEARCH_EMPTY"
 SEARCH_ERROR = "SEARCH_ERROR"
 
 
+def read_failure(reason: str) -> str:
+    return f"{READ_FAIL_PREFIX} {reason}\n{READ_FAIL_MARK}"
+
+
+def is_read_failure(content: str) -> bool:
+    lines = content.splitlines()
+    return bool(lines) and lines[0].startswith(READ_FAIL_PREFIX) and lines[-1] == READ_FAIL_MARK
+
+
 def report_path(topic: str, when: datetime | None = None, reports_dir: Path | None = None) -> Path:
-    reports = (reports_dir or REPORTS_DIR).resolve()
+    reports = reports_dir or REPORTS_DIR
+    if reports.is_symlink():
+        raise ValueError("refusing to write through a symlinked reports/")
+    reports = reports.resolve()
     reports.mkdir(exist_ok=True)
-    stamp = (when or datetime.now()).strftime("%Y%m%d_%H%M")
+    stamp = (when or datetime.now()).strftime("%Y%m%d_%H%M%S")
     slug = re.sub(r"[^a-z0-9]+", "_", topic.lower()).strip("_")[:40] or "report"
-    path = (reports / f"{slug}_{stamp}.md").resolve()
-    if path.parent != reports:
-        raise ValueError("refusing to write outside reports/")
-    return path
+    suffix = 0
+    while True:
+        name = f"{slug}_{stamp}.md" if suffix == 0 else f"{slug}_{stamp}_{suffix}.md"
+        path = (reports / name).resolve()
+        if path.parent != reports:
+            raise ValueError("refusing to write outside reports/")
+        try:
+            path.open("x").close()
+        except FileExistsError:
+            suffix += 1
+            continue
+        return path
 
 
 @tool
@@ -62,7 +83,7 @@ def read_url(url: str) -> str:
 
         return clean[:3000] + ("..." if len(clean) > 3000 else "")
     except Exception as e:
-        return f"{READ_FAIL_PREFIX} {str(e)}"
+        return read_failure(str(e))
 
 
 @tool

@@ -26,9 +26,9 @@ On Windows Command Prompt, run `venv\Scripts\activate.bat`. In PowerShell, run `
 python agent.py "quantum computing breakthroughs 2026"
 ```
 
-The process prints each graph node as it runs. When `write_report` succeeds, the last line is the saved path. `report_path` in `tools.py` builds that path from a slug of the topic and a timestamp.
+The process prints each graph node as it runs. When `write_report` succeeds, the last line is the saved path. `report_path` in `tools.py` builds that path from a slug of the topic and a timestamp with seconds. A second run in the same second gets a numeric suffix, so it does not overwrite the first file.
 
-If the agent cannot read a page, it writes nothing and exits with status 2.
+If the model answers with prose after a successful read, the saved file keeps that prose and appends the page text. The graph allows 8 tool calls. If that cap is hit after a successful read, it still saves the report. If the agent cannot read a page, it writes nothing and exits with status 2.
 
 ## Run the tests
 
