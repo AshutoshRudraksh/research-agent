@@ -1,5 +1,21 @@
+# Virtual environments
 venv/
+.venv/
+
+# Bytecode
 __pycache__/
-*.pyc
+*.py[cod]
+
+# Tests
 .pytest_cache/
+
+# Generated research output
 reports/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store

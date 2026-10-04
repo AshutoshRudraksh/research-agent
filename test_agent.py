@@ -8,7 +8,7 @@ from tools import write_report
 
 
 class FinishWithoutReport(unittest.TestCase):
-    def test_successful_read_then_text_reply_does_not_end(self):
+    def test_successful_read_then_text_reply_routes_to_finalize(self):
         state = {
             "topic": "quantum computing",
             "messages": [
