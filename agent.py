@@ -44,11 +44,10 @@ SYSTEM_PROMPT = """You are a research agent. When given a topic:
 
 Always call write_report as your final action. Be thorough but concise.
 
-You must follow these rules:
-	Rules:
-	- If a tool returns SEARCH_EMPTY or SEARCH_ERROR, retry with a different query (max 3 attempts).
-	- Never call write_report unless you have read at least one URL successfully.
-	- If you cannot find sources, say so instead of writing a report.
+Rules:
+- If a tool returns SEARCH_EMPTY or SEARCH_ERROR, retry with a different query (max 3 attempts).
+- Never call write_report unless you have read at least one URL successfully.
+- If you cannot find sources, say so instead of writing a report.
 
 """
 
@@ -175,7 +174,6 @@ graph.add_conditional_edges(
 )
 graph.add_edge("finalize", END)
 
-# Compile the graph with the checkpointer
 app = graph.compile(checkpointer=checkpointer)
 
 def _thread_has_history(config) -> bool:
