@@ -5,7 +5,7 @@ Run one topic through `gpt-4o`. The agent searches the web, reads one or two pag
 You need the following on the machine before the first run.
 
 - Python 3.10 or newer. This checkout uses Python 3.11.
-- An OpenAI API key. `agent.py` binds `ChatOpenAI` to `gpt-4o`, which reads `OPENAI_API_KEY` from the environment.
+- An OpenAI API key in a `.env` file at the repository root. `agent.py` loads that file on startup and binds `ChatOpenAI` to `gpt-4o`.
 - A network connection. The model call, `search_web`, and `read_url` all use the public network.
 
 ## Create the environment
@@ -16,10 +16,15 @@ From the repository root, run these commands.
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-export OPENAI_API_KEY="your-key"
 ```
 
-On Windows Command Prompt, run `venv\Scripts\activate.bat`, then `set OPENAI_API_KEY=your-key`. In PowerShell, run `.\venv\Scripts\Activate.ps1`, then `$env:OPENAI_API_KEY="your-key"`.
+On Windows Command Prompt, run `venv\Scripts\activate.bat`. In PowerShell, run `.\venv\Scripts\Activate.ps1`.
+
+Put the key in `.env` in the repository root. That file is gitignored.
+
+```
+OPENAI_API_KEY=your-key
+```
 
 ## Research a topic
 

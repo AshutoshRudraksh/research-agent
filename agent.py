@@ -4,6 +4,7 @@ from typing import TypedDict, Annotated, Literal
 
 from typing_extensions import NotRequired
 
+from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langgraph.graph import StateGraph, END
@@ -11,6 +12,8 @@ from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 
 from tools import WRITE_OK_PREFIX, is_read_failure, tools, write_report
+
+load_dotenv()
 
 
 class AgentState(TypedDict):
