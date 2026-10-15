@@ -29,12 +29,14 @@ OPENAI_API_KEY=your-key
 ## Research a topic
 
 ```bash
-python agent.py "quantum computing breakthroughs 2026"
+python agent.py
 ```
 
-The process prints each graph node as it runs. When `write_report` succeeds, the last line is the saved path. `report_path` in `tools.py` builds that path from a slug of the topic and a timestamp with seconds. A second run in the same second gets a numeric suffix, so it does not overwrite the first file.
+Type a topic at the `you>` prompt. The process prints a thread id. Later lines in that session stay on the thread. Resume it with `python agent.py --thread-id <id>`. Type `exit` to stop.
 
-If the model answers with prose after a successful read, the saved file keeps that prose and appends the page text. The graph allows 8 tool calls. If that cap is hit after a successful read, it still saves the report. If the agent cannot read a page, it writes nothing and exits with status 2.
+The process prints each graph node as it runs. When `write_report` succeeds, it prints the saved path. `report_path` in `tools.py` builds that path from a slug of the topic and a timestamp with seconds. A second run in the same second gets a numeric suffix, so it does not overwrite the first file.
+
+If the model answers with prose after a successful read, the saved file keeps that prose and appends the page text. The graph allows 8 tool calls. If that cap is hit after a successful read, it still saves the report. If a turn finds no usable page, it prints that and waits for the next line.
 
 ## Run the tests
 

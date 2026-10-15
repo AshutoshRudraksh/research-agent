@@ -1,5 +1,8 @@
 import argparse
-import sys
+import sqlite3
+import uuid
+from pathlib import Path
+from langgraph.checkpoint.sqlite import SqliteSaver
 from typing import TypedDict, Annotated, Literal
 
 from typing_extensions import NotRequired
@@ -14,6 +17,11 @@ from langgraph.prebuilt import ToolNode
 from tools import WRITE_OK_PREFIX, is_read_failure, tools, write_report
 
 load_dotenv()
+
+checkpoint_path = Path("memory") / "checkpoint.db"
+checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+conn = sqlite3.connect(checkpoint_path, check_same_thread=False)
+checkpointer = SqliteSaver(conn)
 
 
 class AgentState(TypedDict):
@@ -45,10 +53,18 @@ You must follow these rules:
 """
 
 
+def _turn_messages(messages):
+    start = 0
+    for index, message in enumerate(messages):
+        if isinstance(message, HumanMessage):
+            start = index
+    return messages[start:]
+
+
 def research_status(messages) -> ResearchStatus:
     wrote = False
     sourced = False
-    for message in messages:
+    for message in _turn_messages(messages):
         name = getattr(message, "name", None)
         content = str(getattr(message, "content", ""))
         if name == "write_report" and content.startswith(WRITE_OK_PREFIX):
@@ -64,7 +80,7 @@ def research_status(messages) -> ResearchStatus:
 
 def _source_text(messages) -> str:
     chunks = []
-    for message in messages:
+    for message in _turn_messages(messages):
         if getattr(message, "name", None) != "read_url":
             continue
         content = str(getattr(message, "content", ""))
@@ -159,47 +175,64 @@ graph.add_conditional_edges(
 )
 graph.add_edge("finalize", END)
 
-app = graph.compile()
+# Compile the graph with the checkpointer
+app = graph.compile(checkpointer=checkpointer)
+
+def _thread_has_history(config) -> bool:
+    values = app.get_state(config).values or {}
+    return bool(values.get("messages"))
 
 
 def main():
     parser = argparse.ArgumentParser(description="Research Agent")
-    parser.add_argument("topic", help="Topic to research")
+    parser.add_argument("--thread-id", default=None)
     args = parser.parse_args()
+    thread_id = args.thread_id or uuid.uuid4().hex[:8]
+    config = {"configurable": {"thread_id": thread_id}}
+    print(f"\nThread {thread_id}. Type a topic, or exit.\n")
 
-    print(f"\n🔍 Researching: {args.topic}\n")
+    while True:
+        user = input("you> ").strip()
+        if user.lower() in {"exit", "quit", "q"}:
+            break
+        if not user:
+            continue
 
-    initial_state = {
-        "topic": args.topic,
-        "messages": [
-            HumanMessage(content=f"Research this topic and write a report: {args.topic}")
-        ],
-    }
+        if _thread_has_history(config):
+            state = {"messages": [HumanMessage(content=user)]}
+        else:
+            state = {
+                "topic": user,
+                "messages": [
+                    HumanMessage(content=f"Research this topic and write a report: {user}")
+                ],
+            }
 
-    wrote_path = None
-    for step in app.stream(initial_state, stream_mode="updates"):
-        for node_name, data in step.items():
-            print(f"📦 [Node: {node_name}]")
-            if "messages" not in data:
-                continue
-            last_msg = data["messages"][-1]
-            if node_name == "agent":
-                if hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
-                    for tool in last_msg.tool_calls:
-                        print(f"   🤖 Model called tool: '{tool['name']}'")
-                else:
-                    print("   🤖 Model output text content.")
-            elif node_name in ("tools", "finalize"):
-                content = str(last_msg.content)
-                print(f"   🔧 Tool executed and returned content summary: {content[:100]}...")
-                if content.startswith(WRITE_OK_PREFIX):
-                    wrote_path = content.removeprefix(WRITE_OK_PREFIX)
+        wrote_path = None
+        for step in app.stream(state, config, stream_mode="updates"):
+            for node_name, data in step.items():
+                print(f"📦 [Node: {node_name}]")
+                if "messages" not in data:
+                    continue
+                for message in data["messages"]:
+                    content = str(message.content)
+                    if content.startswith(WRITE_OK_PREFIX):
+                        wrote_path = content.removeprefix(WRITE_OK_PREFIX)
+                last_msg = data["messages"][-1]
+                if node_name == "agent":
+                    if hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
+                        for tool in last_msg.tool_calls:
+                            print(f"   🤖 Model called tool: '{tool['name']}'")
+                    else:
+                        print("   🤖 Model output text content.")
+                elif node_name in ("tools", "finalize"):
+                    content = str(last_msg.content)
+                    print(f"   🔧 Tool executed and returned content summary: {content[:100]}...")
 
-    if wrote_path:
-        print(f"\n✅ Done. Report saved to {wrote_path}\n")
-        return
-    print("\nNo report written. The agent found no usable sources.\n")
-    sys.exit(2)
+        if wrote_path:
+            print(f"\n✅ Done. Report saved to {wrote_path}\n")
+        else:
+            print("\nNo report written this turn.\n")
 
 
 if __name__ == "__main__":

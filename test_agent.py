@@ -5,7 +5,7 @@ from pathlib import Path
 
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
-from agent import END, MAX_TOOL_ROUNDS, after_tools, count_tools, finalize_report, should_continue
+from agent import END, MAX_TOOL_ROUNDS, after_tools, count_tools, finalize_report, research_status, should_continue
 from tools import read_failure, report_path, write_report
 
 
@@ -187,6 +187,18 @@ class FinishWithoutReport(unittest.TestCase):
         body = saved.read_text()
         self.assertIn("Qubits stay coherent longer", body)
         self.assertIn("Example Domain page body", body)
+
+    def test_new_turn_ignores_an_earlier_saved_report(self):
+        messages = [
+            ToolMessage(
+                content="Report saved to reports/quantum_computing_20261004_0000.md",
+                tool_call_id="1",
+                name="write_report",
+            ),
+            HumanMessage(content="Look up a second source."),
+            ToolMessage(content="Example Domain", tool_call_id="2", name="read_url"),
+        ]
+        self.assertEqual(research_status(messages), "ready")
 
     def test_successful_write_ends_after_tools(self):
         state = {
