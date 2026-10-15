@@ -1,12 +1,12 @@
 # Research agent
 
-Run one topic through a local model. The agent searches the web, reads one or two pages, and saves a markdown report under `reports/`.
+Run one topic through `gpt-4o`. The agent searches the web, reads one or two pages, and saves a markdown report under `reports/`.
 
 You need the following on the machine before the first run.
 
 - Python 3.10 or newer. This checkout uses Python 3.11.
-- Ollama, with the model `qwen2.5:7b` already pulled. `agent.py` binds `ChatOllama` to that model name.
-- A network connection. `search_web` and `read_url` call the public web.
+- An OpenAI API key. `agent.py` binds `ChatOpenAI` to `gpt-4o`, which reads `OPENAI_API_KEY` from the environment.
+- A network connection. The model call, `search_web`, and `read_url` all use the public network.
 
 ## Create the environment
 
@@ -16,9 +16,10 @@ From the repository root, run these commands.
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+export OPENAI_API_KEY="your-key"
 ```
 
-On Windows Command Prompt, run `venv\Scripts\activate.bat`. In PowerShell, run `.\venv\Scripts\Activate.ps1`.
+On Windows Command Prompt, run `venv\Scripts\activate.bat`, then `set OPENAI_API_KEY=your-key`. In PowerShell, run `.\venv\Scripts\Activate.ps1`, then `$env:OPENAI_API_KEY="your-key"`.
 
 ## Research a topic
 
@@ -32,7 +33,7 @@ If the model answers with prose after a successful read, the saved file keeps th
 
 ## Run the tests
 
-The tests do not call Ollama or the network.
+The tests do not call OpenAI or the network.
 
 ```bash
 python -m unittest test_agent.py

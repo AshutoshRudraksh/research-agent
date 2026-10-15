@@ -4,7 +4,7 @@ from typing import TypedDict, Annotated, Literal
 
 from typing_extensions import NotRequired
 
-from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
@@ -23,8 +23,8 @@ MAX_TOOL_ROUNDS = 8
 
 ResearchStatus = Literal["written", "ready", "unsourced"]
 
-llm = ChatOllama(model="qwen2.5:7b", temperature=0)
-llm_with_tools = llm.bind_tools(tools)
+def _llm():
+    return ChatOpenAI(model="gpt-4o", temperature=0).bind_tools(tools)
 
 SYSTEM_PROMPT = """You are a research agent. When given a topic:
 1. Search the web for relevant information
@@ -75,7 +75,7 @@ def call_model(state: AgentState):
     if not any(isinstance(m, SystemMessage) for m in messages):
         messages = [SystemMessage(content=SYSTEM_PROMPT)] + messages
 
-    response = llm_with_tools.invoke(messages)
+    response = _llm().invoke(messages)
     return {"messages": [response]}
 
 
